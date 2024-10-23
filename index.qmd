@@ -1,0 +1,413 @@
+---
+title: "First Contact Report"
+subtitle: "Saamuhika Shakti"
+author: "**Arpit Arora**, Udhyam Vyapaar"
+format: html
+editor: visual
+date: "2024-10-01"
+---
+
+## Background
+
+-   Locate and connect with the listed 201 vyapaaris from the programme
+-   Build foundational understanding about the primary target group
+-   Identify opportunities to deepen knowledge about the subject
+
+## Master Database
+
+Our exercise to track and map all the 201 vyapaaris was guided by the following file received from Sambhav Foundation.
+
+**File Name**: `H&M-EDP - Progress Tracking Sheet of Beneficiary Support-2023.xlsx`
+
+**Tab Name**: `EDP Support -main sheet`
+
+You can find the original data file [here](https://docs.google.com/spreadsheets/d/1Qf_y6iL7dmRQfiIqqdurTEUJ-7TB3vkd/edit?usp=sharing&ouid=114334724697106432801&rtpof=true&sd=true).
+
+```{r setup, include = FALSE}
+# Loading Packages
+library(tidyverse)
+library(waterfalls)
+library(gridExtra)
+
+# Read the file
+vyapaari_master <- read_csv("data/processed/first-contact-master.csv")
+```
+
+## Overall Status
+
+The vyapaaris in the original data provided by Sambhav Foundation were tracked and given the following status:
+
+-   **Active**: Vyapaaris located and currently running businesses
+-   **Inactive**: Vyapaaris located but not running businesses
+-   **Duplicate**: Vyapaaris located but already logged in system
+-   **Missing**: Vyapaaris not located at the mentioned location
+-   **Not Located**: Vyapaaris located and currently running businesses
+
+Additionally, if any other vyapaaris were located in the communities visited, they were marked as "**New**" and the first contact information was captured.
+
+**Note**: From the 201 vyapaari original list, 4 were identified as inactive group businesses where the individual vyapaaris were onboarded.
+
+```{r overall, echo=FALSE}
+# New Final Status
+vyapaari_master <- vyapaari_master |>
+  mutate(new_final_status = if_else(is.na(final_status) & !is.na(start), "new", 
+                                    if_else(is.na(final_status) & is.na(start), "missing", final_status))) |>
+  filter(new_final_status != "dropped")
+
+# Waterfall Chart
+waterfall <- vyapaari_master |>
+  group_by(new_final_status) |>
+  summarise(count = n()) |>
+  mutate(count = if_else(new_final_status == "active" | new_final_status == "new", count, count*-1)) |>
+  add_row(new_final_status = "original", count = 197) |>
+  filter(new_final_status != "active") |>
+  mutate(new_final_status =  factor(new_final_status, 
+                                    levels = c("original", "inactive", "duplicate",
+                                               "missing", "not located", "new"))) |>
+  arrange(new_final_status)
+
+waterfall(waterfall,
+          calc_total = TRUE,
+          rect_width = 0.6,
+          rect_border = NA) +
+  theme_minimal() +
+  labs(title = "",
+       x = "Status",
+       y = "# of Vyapaaris")
+```
+
+## Geographical Spread
+
+The vyapaaris identified and tracked are spread across the following region in and around Bangalore, Karnataka.
+
+![Geographic location of vyapaaris.](data/KoboToolbox.png)
+
+## Demographics
+
+```{r demo, echo = FALSE}
+## Age
+mean_value <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(vyapaari_age)) |>
+  summarise(mean_age = mean(vyapaari_age)) |>
+  pull(mean_age)
+
+median_value <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(vyapaari_age)) |>
+  summarise(median_age = median(vyapaari_age)) |>
+  pull(median_age)
+
+vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(vyapaari_age)) |>
+  ggplot(aes(x = vyapaari_age, fill = vyapaari_gender)) +
+  geom_histogram(binwidth = 5, boundary = 0, position = "stack", alpha = 0.7) +
+  geom_text(
+    stat = "bin",
+    binwidth = 5,
+    boundary = 0,
+    aes(label = after_stat(count)),
+    vjust = -0.5,
+    position = position_stack(vjust = 0.5),
+    color = "black",
+    size = 3
+  ) +
+  geom_vline(aes(xintercept = mean_value), color = "red", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = mean_value, y = 20, label = paste("Mean Age:", round(mean_value, 2)), color = "red", angle = 90, vjust = -0.5) +
+  geom_vline(aes(xintercept = median_value), color = "red", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = median_value, y = 20, label = paste("Median Age:", round(median_value, 2)), color = "red", angle = 90, vjust = -0.5) +
+  theme_minimal() +
+  labs(title = "Age Distribution of the Vyapaaris",
+       x = "Vyapaari Age",
+       y = "# of Vyapaaris",
+       fill = "Gender")
+```
+
+-   The age of the active vyapaaris ranges from 20 to 60 with mean age at 37.18
+-   Of the 6 male vyapaaris in the original dataset, only 3 are currently active
+
+## Business Details
+
+```{r shop, echo = FALSE}
+vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(shop_facility_type)) |>
+  group_by(shop_facility_type, shop_ownership) |>
+  summarise(count = n(), .groups = "drop") |>
+  ggplot(aes(x = reorder(shop_facility_type, -count), y = count, fill = shop_ownership)) +
+  geom_bar(stat = "identity", color = "black", linetype = "blank") +
+  theme_minimal() +
+  geom_text(aes(label = count), position = position_stack(vjust = 0.5)) +
+  labs(title = "Shop Types and Ownership",
+       x = "Shop Type",
+       y = "# of Vyapaaris",
+       fill = "Ownership")
+```
+
+-   `Home` and `Mobile Cart` run businesses are the most common amongst the active vyapaaris
+-   8 of the total vyapaari businesses onboarded are run by a `Collective`, rest are `Individual`
+-   Most of the Shop Types labelled `Others` are businesses operating nearby their communities on foot
+
+------------------------------------------------------------------------
+
+```{r business-type, echo = FALSE}
+# -- something
+vyapaari_master |>
+  filter(!is.na(shop_business_type_clean)) |>
+  group_by(shop_business_type_clean) |>
+  summarise(count = n()) |>
+  arrange(desc(count)) |>
+  ggplot(aes(x = reorder(shop_business_type_clean, -count), y = count)) +
+  geom_bar(stat = "identity",
+           color = "black", fill = "lightpink", linetype = "blank") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(aes(label = count), vjust = -0.5) +
+  labs(title = "Business Types",
+       x = "Priamry Business Type",
+       y = "# of Vyapaaris")
+```
+
+-   `Groceries`, `Food` Outlets and `Hair Picking` are the most common businesses amongst the vyapaaris
+-   5 vyapaaris identified as `Hair Picking +` engage in other secondary businesses like broom and mops making
+
+**Note**: Most vyapaaris engage in multiple businesses, a deeper exploration classification of different business types, share and seasonality is underway.
+
+### Business Composition
+
+```{r compo, echo = FALSE}
+paste0("Avg. Total Employees: ", round(mean(vyapaari_master$total_employees, na.rm = TRUE), digits = 1))
+paste0("Avg. Family Employees: ", round(mean(vyapaari_master$total_family_employees, na.rm = TRUE), digits = 1))
+```
+
+## Financial Details
+
+**Note**:
+
+-   Our observations from the field visits suggest that vyapaaris have a limited understanding of their finances
+-   These initial numbers are just top build a broader understanding of the target group
+-   Further conversations are already underway to understand the financial data more deeply.
+
+```{r daily, echo = FALSE}
+# Calculate means
+means <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(daily_expenses)) |>
+  summarise(
+    daily_income_mean = mean(daily_income, na.rm = TRUE),
+    daily_expenses_mean = mean(daily_expenses, na.rm = TRUE),
+    daily_profits_mean = mean(daily_profits, na.rm = TRUE)
+  )
+
+# Text Line Values
+daily_income_mean <- means$daily_income_mean
+daily_expenses_mean <- means$daily_expenses_mean
+daily_profits_mean <- means$daily_profits_mean
+
+# Reshape data for plotting
+vyapaari_finances <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(daily_expenses)) |>
+  select(daily_income, daily_expenses, daily_profits) |>
+  pivot_longer(cols = c("daily_income", "daily_expenses", "daily_profits"), 
+               names_to = "variable", 
+               values_to = "metric")
+
+# Create the plot
+ggplot(vyapaari_finances) +
+  aes(x = metric, color = variable, fill = variable) +
+  geom_histogram(binwidth = 50, na.rm = TRUE, alpha = 0.5, position = "identity") +
+  xlim(0, 2500) +
+  theme_minimal() +
+  geom_vline(data = means, aes(xintercept = daily_income_mean), color = "green", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = daily_income_mean, y = 20, label = paste("Mean Revenue: Rs. ", round(daily_income_mean, 2)), angle = 90, vjust = -0.5, size = 3) +
+  geom_vline(data = means, aes(xintercept = daily_expenses_mean), color = "red", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = daily_expenses_mean, y = 20, label = paste("Mean Expense: Rs. ", round(daily_expenses_mean, 2)), angle = 90, vjust = -0.5, size = 3) +
+  geom_vline(data = means, aes(xintercept = daily_profits_mean), color = "blue", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = daily_profits_mean, y = 19.3, label = paste("Mean Profit: Rs. ", round(daily_profits_mean, 2)), angle = 90, vjust = -0.5, size = 3) +
+  labs(title = "Distribution of Daily Revenue, Expenses, and Profits",
+       x = "Amount",
+       y = "Frequency",
+       color = "Variable",
+       fill = "Variable") +
+  scale_color_manual(values = c("daily_income" = "green", "daily_expenses" = "red", "daily_profits" = "blue"),
+                     labels = c("daily_income" = "Daily Revenue", "daily_expenses" = "Daily Expenses", "daily_profits" = "Daily Profits")) +
+  scale_fill_manual(values = c("daily_income" = "green", "daily_expenses" = "red", "daily_profits" = "blue"),
+                    labels = c("daily_income" = "Daily Revenue", "daily_expenses" = "Daily Expenses", "daily_profits" = "Daily Profits"))
+```
+
+#### Quick Daily Medians
+
+```{r daily-medians, echo = FALSE}
+## Median Data
+paste0("Median Daily Revenue: ₹", median(vyapaari_master$daily_income, na.rm = TRUE))
+paste0("Median Daily Expenses: ₹", median(vyapaari_master$daily_expenses, na.rm = TRUE))
+paste0("Median Daily Profit: ₹", median(vyapaari_master$daily_profits, na.rm = TRUE))
+```
+
+```{r monthly, echo = FALSE}
+# Calculate means
+means <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(monthly_expenses)) |>
+  summarise(
+    monthly_income_mean = mean(monthly_income, na.rm = TRUE),
+    monthly_expenses_mean = mean(monthly_expenses, na.rm = TRUE),
+    monthly_profits_mean = mean(monthly_profits, na.rm = TRUE)
+  )
+
+# Text Line Values
+monthly_income_mean <- means$monthly_income_mean
+monthly_expenses_mean <- means$monthly_expenses_mean
+monthly_profits_mean <- means$monthly_profits_mean
+
+# Reshape data for plotting
+vyapaari_finances <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(monthly_expenses)) |>
+  select(monthly_income, monthly_expenses, monthly_profits) |>
+  pivot_longer(cols = c("monthly_income", "monthly_expenses", "monthly_profits"), 
+               names_to = "variable", 
+               values_to = "metric")
+
+# Create the plot
+ggplot(vyapaari_finances) +
+  aes(x = metric, color = variable, fill = variable) +
+  geom_histogram(binwidth = 500, na.rm = TRUE, alpha = 0.5, position = "identity") +
+  xlim(0, 25000) +
+  theme_minimal() +
+  geom_vline(data = means, aes(xintercept = monthly_income_mean), color = "green", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = monthly_income_mean, y = 11.5, label = paste("Mean Revenue: Rs. ", round(monthly_income_mean, 2)), angle = 90, vjust = -0.5, size = 3) +
+  geom_vline(data = means, aes(xintercept = monthly_expenses_mean), color = "red", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = monthly_expenses_mean, y = 11.45, label = paste("Mean Expense: Rs. ", round(monthly_expenses_mean, 2)), angle = 90, vjust = -0.5, size = 3) +
+  geom_vline(data = means, aes(xintercept = monthly_profits_mean), color = "blue", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = monthly_profits_mean, y = 11.1, label = paste("Mean Profit: Rs. ", round(monthly_profits_mean, 2)), angle = 90, vjust = 1.5, size = 3) +
+  labs(title = "Distribution of Monthly Revenue, Expenses, and Profits",
+       x = "Amount",
+       y = "Frequency",
+       color = "Variable",
+       fill = "Variable") +
+  scale_color_manual(values = c("monthly_income" = "green", "monthly_expenses" = "red", "monthly_profits" = "blue"),
+                     labels = c("monthly_income" = "Monthly Revenue", "monthly_expenses" = "Monthly Expenses", "monthly_profits" = "Monthly Profits")) +
+  scale_fill_manual(values = c("monthly_income" = "green", "monthly_expenses" = "red", "monthly_profits" = "blue"),
+                    labels = c("monthly_income" = "Monthly Revenue", "monthly_expenses" = "Monthly Expenses", "monthly_profits" = "Monthly Profits"))
+
+```
+
+#### Quick Monthly Medians
+
+```{r monthly-medians, echo = FALSE}
+## Median Data
+paste0("Median Monthly Revenue: ₹", median(vyapaari_master$monthly_income, na.rm = TRUE))
+paste0("Median Monthly Expenses: ₹", median(vyapaari_master$monthly_expenses, na.rm = TRUE))
+paste0("Median Monthly Profit: ₹", median(vyapaari_master$monthly_profits, na.rm = TRUE))
+```
+
+## Operational Details
+
+#### Formal Financing
+
+```{r banking, echo = FALSE, warning = FALSE}
+vba <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(bank_account)) |>
+  group_by(bank_account) |>
+  summarise(count = n())
+
+vdp <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(digital_payments)) |>
+  group_by(digital_payments) |>
+  summarise(count = n())
+
+paste0(round(sum(vba$count[vba$bank_account == "yes"])/sum(vba$count)*100, digits = 1),"% of all vyapaaris have a bank account.")
+
+paste0(round(sum(vdp$count[vdp$digital_payments == "yes"])/sum(vdp$count)*100, digits = 1),"% of all vyapaaris use digital payments.")
+```
+
+#### Smartphone Access
+
+```{r smartphone, echo = FALSE, warning = FALSE}
+vsa <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(smartphone_access)) |>
+  group_by(smartphone_access) |>
+  summarise(count = n())
+
+vsu <- vyapaari_master |>
+  filter(new_final_status == "active" | new_final_status == "new") |>
+  filter(!is.na(smartphone_usability)) |>
+  group_by(smartphone_usability) |>
+  summarise(count = n())
+
+paste0(round(sum(vsa$count[vsa$smartphone_access == c("yes", "shared")])/sum(vsa$count)*100, digits = 1),"% of all vyapaaris have access to smartphones.")
+
+paste0(round(sum(vsu$count[vsu$smartphone_usability == c("yes")])/sum(vsu$count)*100, digits = 1),"% of all vyapaaris can use smartphones.")
+
+paste0(round(sum(vsa$count[vsa$smartphone_access == c("shared")])/sum(vsa$count)*100, digits = 1),"% of all vyapaaris use shared smartphones.")
+```
+
+## Household Details
+
+```{r household, echo = FALSE}
+paste("Median Family Size: ", round(median(vyapaari_master$total_family_size, na.rm = TRUE), digits = 1))
+
+paste("Median Children Count: ", round(median(vyapaari_master$total_children, na.rm = TRUE), digits = 1))
+
+paste("Median Working Members: ", round(median(vyapaari_master$total_earning_members, na.rm = TRUE), digits = 1))
+```
+
+------------------------------------------------------------------------
+
+### Family Education Levels
+
+```{r ed-level, echo = FALSE}
+vyapaari_master |>
+  filter(!is.na(education_level_clean)) |>
+  group_by(education_level_clean) |>
+  summarise(count = n()) |>
+  arrange(desc(count)) |>
+  mutate(education_level_clean =  factor(education_level_clean, 
+                                    levels = c("1st", "3rd", "4th", "5th", "6th", "7th", "8th", "9th",
+                                               "10th", "11th", "12th", "PUC", "Diploma", "Degree", "Post Graduate", "Others"))) |>
+  ggplot(aes(x = education_level_clean, y = count)) +
+  geom_bar(stat = "identity",
+           color = "black", fill = "yellow", linetype = "blank") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(aes(label = count), vjust = -0.5) +
+  labs(title = "",
+       x = "Highest Family Education Levels",
+       y = "# of Vyapaaris")
+```
+
+-   Nearly a third of the vyapaaris families have 10th standard as the highest level of Schooling
+-   Some vyapaaris have Dimploma and Degree holders in their families, with one family having CA
+
+### Family Domicile
+
+~72% of the vyapaaris have are natively from Bangalore.
+
+```{r domicile, echo = FALSE}
+vyapaari_master |>
+  filter(!is.na(origin_region_clean)) |>
+  group_by(origin_region_clean) |>
+  summarise(count = n()) |>
+  arrange(desc(count)) |>
+  ggplot(aes(x = reorder(origin_region_clean, -count), y = count)) +
+  geom_bar(stat = "identity",
+           color = "black", fill = "lightgreen", linetype = "blank") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(aes(label = count), vjust = -0.5) +
+  labs(title = "",
+       x = "",
+       y = "# of Vyapaaris")
+```
+
+## Next Steps
+
+-   Classify businesses into types/levels for intervention based on relevant parameters
+-   Categorise the actions these vyapaaris are already taking with their businesses
+-   Identify well established high potential businesses and their characteristics
