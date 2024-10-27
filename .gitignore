@@ -48,6 +48,11 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
+# Quarto Files
+/_site/
+_quarto.yml
+_publish.yml
+
 # Specific Files
 .DS_Store
 /data/

@@ -1,5 +1,0 @@
-- source: index.qmd
-- source: project
-  quarto-pub:
-    - id: 6d59e04b-b00c-4333-9d9c-62fa3b8c564c
-      url: 'https://thedataareclean.quarto.pub/saas-first-contact-report'
