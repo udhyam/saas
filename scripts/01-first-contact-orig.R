@@ -3,7 +3,7 @@
 
 # Clean the worskspace
 rm(list = ls())
-  
+
 # Loading Packages
 library(KoboconnectR)
 library(tidyverse)
@@ -36,20 +36,19 @@ gs4_auth()
 id_contact_vyapaaris <- Sys.getenv(c("ID_CONTACT_FORM"))
 
 # Baseline - Vyapaaris
-data_contact_vyapaaris_dwnld <- readxl::read_xlsx("data/raw/saas-fc-raw.xlsx")
-# data_contact_vyapaaris_dwnld <- 
-#   kobo_df_download(
-#     url = "kf.kobotoolbox.org",
-#     uname = USER_ID,
-#     pwd = PASSWORD,
-#     assetid = id_contact_vyapaaris,
-#     lang = "_xml",
-#     sleep = 5
-#   )
+data_contact_vyapaaris_dwnld <-
+  kobo_df_download(
+    url = "kf.kobotoolbox.org",
+    uname = USER_ID,
+    pwd = PASSWORD,
+    assetid = id_contact_vyapaaris,
+    lang = "_xml",
+    sleep = 5
+  )
 
 # Download the Sambhav data
 data_original_vyapaaris_dwnld <- read_sheet("https://docs.google.com/spreadsheets/d/1O4CEb3Fq-OjMrqzZuJaPPmD88sgBvBMqsu7Bf8hE10Y/", 
-                                      sheet = "sambhav-original")
+                                            sheet = "sambhav-original")
 
 # Secure the workspace
 rm(USER_ID)
@@ -83,8 +82,7 @@ data_original_vyapaaris <- data_original_vyapaaris |>
 data_contact_vyapaaris <- data_contact_vyapaaris |>
   mutate(vyapaari_data_status = ifelse(vyapaari_data_status == "", "existing", vyapaari_data_status)) |>
   mutate(vyapaari_final_status = ifelse(vyapaari_located == "yes", "active",
-                                        ifelse(vyapaari_located == "no", "missing", vyapaari_located))) |>
-  mutate(vyapaari_phone_number = as.numeric(vyapaari_phone_number))
+                                        ifelse(vyapaari_located == "no", "missing", vyapaari_located)))
 
 # Combine the data original and first contact data
 # -----------------------------------------------------------------------------
@@ -169,7 +167,7 @@ data_master_vyapaaris <- data_master_vyapaaris |>
   left_join(vyapaari_ids, by = c("phone_number", "vyapaari_name"))
 
 # data_master_vyapaaris <- data_master_vyapaaris |>
-#  mutate(vyapaari_id = str_c("UVS", str_pad(index, width = 3, pad = "0")))
+#  mutate(vyapaari_id = str_c("UVS", str_pad(x_index, width = 3, pad = "0")))
 
 vyapaari_ids_new <- data_master_vyapaaris |>
   filter(vyapaari_final_status == "active") |>
@@ -303,14 +301,14 @@ export_sattva <- data_master_vyapaaris |>
   filter(vyapaari_final_status == "active") |>
   select(vyapaari_id, start, end, username, enumerator_name, vyapaari_name, vyapaari_data_status, vyapaari_located,
          vyapaari_gender, vyapaari_age, vyapaari_photograph, vyapaari_photograph_url, shop_name, shop_location,
-         shop_location_latitude, shop_location_longitude, shop_location_altitude, shop_location_precision,
+         x_shop_location_latitude, x_shop_location_longitude, x_shop_location_altitude, x_shop_location_precision,
          shop_locality, business_photograph, business_photograph_url, shop_ownership, shop_business_type,
          business_baseline_details, shop_facility_type, shop_facility_type_other,
          working_days, daily_income, daily_expenses, daily_profits, monthly_income, monthly_expenses, monthly_profits,
          smartphone_access, smartphone_usability, bank_account, digital_payments,
          total_employees, total_family_employees, household_baseline_details,
          total_family_size, total_children, total_earning_members, education_level, origin_city, vyapaari_other_details,
-         id, uuid, submission_time, validation_status, notes, status, submitted_by, version, tags, index,
+         x_id, x_uuid, x_submission_time, x_validation_status, x_notes, x_status, x_submitted_by, x_version, x_tags, x_index,
          vyapaari_final_status, shop_business_type_clean, origin_city_clean,
          origin_region_clean, shop_locality_clean, education_level_clean)
 
@@ -329,7 +327,7 @@ export_ops <- data_master_vyapaaris |>
          smartphone_access, smartphone_usability, bank_account, digital_payments,
          total_employees, total_family_employees, household_baseline_details,
          total_family_size, total_children, total_earning_members,
-         education_level, origin_city, vyapaari_other_details, index)
+         education_level, origin_city, vyapaari_other_details, x_index)
 
 write_sheet(export_ops, 
             ss = "https://docs.google.com/spreadsheets/d/1bcSvo_9ONt0gt8NNNNCT6W0pFBqtjzYBHjcO0YcWrEE/",
@@ -344,11 +342,10 @@ data_master_vyapaaris |>
   arrange(desc(count))
 
 data_master_vyapaaris |>
-  group_by(uuid) |>
+  group_by(x_uuid) |>
   summarise(count = n()) |>
   arrange(desc(count))
 
 data_master_vyapaaris  |>
   group_by(final_status, vyapaari_data_status, vyapaari_final_status) |> 
   summarise(count = n())
-

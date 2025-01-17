@@ -30,7 +30,6 @@ data_master_vyapaaris <- read_sheet("https://docs.google.com/spreadsheets/d/1O4C
 # Export backup for Reporting
 write_csv(data_master_vyapaaris, "data/processed/first-contact-master.csv")
 
-
 # Create a field "New Final Status" and drop extra entries
 data_master_vyapaaris <- data_master_vyapaaris |>
   mutate(new_final_status = if_else(is.na(final_status), "new", final_status)) |>
@@ -77,7 +76,7 @@ data_master_vyapaaris_analysis <- data_master_vyapaaris |>
                                     if_else(is.na(final_status) & is.na(start), "missing", final_status))) |>
   filter(new_final_status != "dropped") |>
   mutate(start_date = as.Date(start, "%Y-%m-%d")) |>
-  filter(start_date < "2024-10-01")
+  filter(start_date < "2024-12-01")
 
 # Vyapaari Suummary
 status_type <- data_master_vyapaaris_analysis |>
@@ -98,7 +97,7 @@ data_master_vyapaaris |>
   arrange(desc(count))
 
 data_master_vyapaaris |>
-  group_by(x_uuid) |>
+  group_by(uuid) |>
   summarise(count = n()) |>
   arrange(desc(count))
 

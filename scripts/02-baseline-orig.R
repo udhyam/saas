@@ -36,17 +36,16 @@ gs4_auth()
 id_baseline_vyapaaris <- Sys.getenv(c("ID_BASELINE_FORM"))
 
 # Baseline - Vyapaaris
-data_baseline_vyapaaris <- readxl::read_xlsx("data/raw/saas-bl-raw.xlsx")
-# data_baseline_vyapaaris <-
-#   kobo_df_download(
-#     url = "kf.kobotoolbox.org",
-#     uname = USER_ID,
-#     pwd = PASSWORD,
-#     assetid = id_baseline_vyapaaris,
-#     all = "false",
-#     lang = "_xml",
-#     sleep = 5
-#   )
+data_baseline_vyapaaris <- 
+  kobo_df_download(
+    url = "kf.kobotoolbox.org",
+    uname = USER_ID,
+    pwd = PASSWORD,
+    assetid = id_baseline_vyapaaris,
+    all = "false",
+    lang = "_xml",
+    sleep = 5
+  )
 
 # Save original backup
 write_sheet(data_baseline_vyapaaris, 
@@ -112,7 +111,7 @@ rm(data_baseline_vyapaaris)
 data_fc_missing <-  anti_join(data_baseline_vyapaaris_clean,
                               data_first_contact_vyapaaris_ops,
                               by = join_by(vyapaari_id_bl == vyapaari_id_fc)) |>
-  filter((is.na(vyapaari_status_bl) | is.null(vyapaari_status_bl))) |>
+  filter(!(is.na(vyapaari_status_bl) | is.null(vyapaari_status_bl))) |>
   select(vyapaari_id = vyapaari_id_bl,
          vyapaari_name = vyapaari_name_bl,
          vyapaari_phone_number = vyapaari_phone_number_bl)
@@ -127,9 +126,9 @@ data_bl_missing <- anti_join(data_first_contact_vyapaaris_ops,
 
 # Matching Two Datasets
 data_fc_bl_matching <- full_join(data_first_contact_vyapaaris_ops,
-                             data_baseline_vyapaaris_clean,
-                             by = join_by(vyapaari_id_fc == vyapaari_id_bl)) |>
-  filter((is.na(vyapaari_status_bl) | is.null(vyapaari_status_bl))) |>
+                                 data_baseline_vyapaaris_clean,
+                                 by = join_by(vyapaari_id_fc == vyapaari_id_bl)) |>
+  filter(!(is.na(vyapaari_status_bl) | is.null(vyapaari_status_bl))) |>
   select(fc_phone_number = phone_number_fc,
          fc_name = vyapaari_name_fc,
          vyapaari_id = vyapaari_id_fc,
@@ -160,11 +159,11 @@ rm(data_fc_bl_matching)
 # -----------------------------------------------------------------------------
 # Read the Google sheet
 data_baseline_vyapaaris_cleaned <- read_sheet("https://docs.google.com/spreadsheets/d/1O4CEb3Fq-OjMrqzZuJaPPmD88sgBvBMqsu7Bf8hE10Y/",
-                                                sheet = "bl-transform-data")
+                                              sheet = "bl-transform-data")
 
 # Clean Vyapaari Business
 vyapaari_business <- read_sheet("https://docs.google.com/spreadsheets/d/1jH6J_Umeqyyu1gbabpI7e36797Js8YCLPm0UqveitWI/", 
-                                       sheet = "business-type-clean")
+                                sheet = "business-type-clean")
 
 # Join cleaned business info
 data_baseline_vyapaaris_cleaned <- data_baseline_vyapaaris_cleaned |>
@@ -241,4 +240,3 @@ data_baseline_vyapaaris_final <- data_baseline_vyapaaris_cleaned |>
 write_sheet(data_baseline_vyapaaris_final, 
             ss = "https://docs.google.com/spreadsheets/d/1O4CEb3Fq-OjMrqzZuJaPPmD88sgBvBMqsu7Bf8hE10Y/",
             sheet = "bl-final")
-
